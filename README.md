@@ -1,5 +1,11 @@
 # AutoInspect AI
 
+<img width="1863" height="937" alt="Screenshot 2026-11-02 181340" src="https://github.com/user-attachments/assets/deedb8bb-bcd3-4dab-abd9-1e3888bfd904" />
+
+<img width="1581" height="840" alt="Screenshot 2026-11-02 181537" src="https://github.com/user-attachments/assets/85584f11-2fb8-4098-adef-cee0fe7f0ed5" />
+
+<img width="1472" height="911" alt="Screenshot 2026-11-02 181604" src="https://github.com/user-attachments/assets/46cb3ce5-6d24-4454-9b31-2124e01f39fe" />
+
 AutoInspect AI classifies visible vehicle damage into three severity levels:
 **Low**, **Medium**, and **High**. It includes MobileNetV3-Small training,
 evaluation scripts, and a Streamlit app with Grad-CAM explanations.
