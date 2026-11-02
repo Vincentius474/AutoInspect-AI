@@ -1,5 +1,8 @@
 data/*
-models/*
+# models/*
+!models/checkpoints/
+models/checkpoints/*
+!models/checkpoints/best_mobilenet.pth
 __pycache__/
 *.py[cod]
 .pytest_cache/

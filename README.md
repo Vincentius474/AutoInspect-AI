@@ -77,6 +77,16 @@ probabilities. The Grad-CAM option can display the strongest regions of
 influence as contour outlines. These outlines are not damage boundaries or
 proof that a prediction is correct.
 
+## Deploy to Streamlit Community Cloud
+
+This project is a Streamlit app, so deploy it to Streamlit Community Cloud
+rather than as a Vercel Python function:
+
+1. Push the repository to GitHub.
+2. In Streamlit Community Cloud, create an app using the repository and branch.
+3. Set the main file path to `app/streamlit_app.py`.
+4. Deploy with Python 3.10 or newer.
+
 The standalone Grad-CAM script can also save a visualization for a local
 image:
 
