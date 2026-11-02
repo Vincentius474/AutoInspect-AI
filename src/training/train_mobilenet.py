@@ -1,24 +1,21 @@
 from pathlib import Path
 import random
-
 import numpy as np
 import torch
 import torch.nn as nn
-
+import yaml
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import f1_score
 from tqdm import tqdm
-
 from src.models.mobilenet import create_mobilenet
 from src.data.loaders import create_dataloaders
-
 
 CHECKPOINT_DIR = Path("models/checkpoints")
 CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
-
 def set_seed(seed=42):
+    """Sets the random seed for reproducibility across various libraries."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -26,8 +23,8 @@ def set_seed(seed=42):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-
 def calculate_metrics(labels, predictions):
+    """Calculates accuracy and macro F1 score based on the true and predicted labels."""
     return {
         "accuracy": float(
             np.mean(np.array(labels) == np.array(predictions))
@@ -45,14 +42,12 @@ def calculate_metrics(labels, predictions):
 
 
 def run_epoch(model, loader, criterion, device, optimizer=None):
-
+    """Runs a single epoch of training or validation."""
     training = optimizer is not None
     model.train(training)
-    if training and not any(
-        parameter.requires_grad
-        for parameter in model.features.parameters()
-    ):
-        for module in model.features.modules():
+
+    if training:
+        for module in model.modules():
             if isinstance(module, nn.BatchNorm2d):
                 module.eval()
 
@@ -61,10 +56,8 @@ def run_epoch(model, loader, criterion, device, optimizer=None):
     all_predictions = []
 
     context = torch.enable_grad() if training else torch.no_grad()
-
     with context:
         progress = tqdm(loader, leave=False)
-
         for images, labels in progress:
             images = images.to(device)
             labels = labels.to(device)
@@ -86,12 +79,9 @@ def run_epoch(model, loader, criterion, device, optimizer=None):
                 optimizer.step()
 
             total_loss += loss.item() * images.size(0)
-
             predictions = outputs.argmax(dim=1)
-
             all_labels.extend(labels.cpu().tolist())
             all_predictions.extend(predictions.cpu().tolist())
-
             progress.set_postfix(loss=f"{loss.item():.4f}")
 
     average_loss = total_loss / len(loader.dataset)
@@ -99,12 +89,10 @@ def run_epoch(model, loader, criterion, device, optimizer=None):
 
     return average_loss, metrics
 
-
 def get_class_weights(dataset, device):
+    """Calculates class weights based on the distribution of classes in the dataset."""
     labels = [label for _, label in dataset.samples]
-
     counts = np.bincount(labels, minlength=3)
-
     if np.any(counts == 0):
         raise ValueError("A class has no training images.")
 
@@ -118,6 +106,7 @@ def get_class_weights(dataset, device):
 
 
 def save_checkpoint(model, epoch, best_f1, path):
+    """Saves the model checkpoint with the current state, epoch, and best validation F1 score."""
     torch.save(
         {
             "model_state_dict": model.state_dict(),
@@ -133,18 +122,9 @@ def save_checkpoint(model, epoch, best_f1, path):
     )
 
 
-def train_mobilenet(
-    warmup_epochs=5,
-    fine_tune_epochs=25,
-    batch_size=16,
-    seed=42
-):
+def train_mobilenet(warmup_epochs=5, fine_tune_epochs=25, batch_size=16, seed=42):
     set_seed(seed)
-
-    device = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
     train_loader, val_loader, _ = create_dataloaders(
@@ -164,23 +144,12 @@ def train_mobilenet(
         device
     )
 
-    criterion = nn.CrossEntropyLoss(
-        weight=class_weights
-    )
-
-    checkpoint_path = (
-        CHECKPOINT_DIR / "best_mobilenet.pth"
-    )
-
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    checkpoint_path = (CHECKPOINT_DIR / "best_mobilenet.pth")
     best_val_f1 = -1.0
     best_epoch = 0
 
-    # ---------------------------------------
-    # Stage 1: Train classification layer
-    # ---------------------------------------
-
     print("\nSTAGE 1: Training classifier")
-
     optimizer = AdamW(
         model.classifier.parameters(),
         lr=1e-3,
@@ -221,12 +190,18 @@ def train_mobilenet(
                 checkpoint_path
             )
 
-    # ---------------------------------------
-    # Stage 2: Fine-tune entire network
-    # ---------------------------------------
-
     print("\nSTAGE 2: Fine-tuning entire network")
+    checkpoint = torch.load(
+        checkpoint_path,
+        map_location=device,
+        weights_only=True
+    )
+    model.load_state_dict(checkpoint["model_state_dict"])
 
+    print(
+        f"Restored best warmup checkpoint "
+        f"from epoch {checkpoint['epoch']}"
+    )
     for parameter in model.features.parameters():
         parameter.requires_grad = True
 
@@ -234,11 +209,11 @@ def train_mobilenet(
         [
             {
                 "params": model.features.parameters(),
-                "lr": 1e-4
+                "lr": 1e-5
             },
             {
                 "params": model.classifier.parameters(),
-                "lr": 3e-4
+                "lr": 1e-4
             }
         ],
         weight_decay=1e-4
@@ -308,4 +283,6 @@ def train_mobilenet(
     return best_val_f1
 
 if __name__ == "__main__":
-    train_mobilenet()
+    with Path("configs/config.yaml").open(encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file)
+    train_mobilenet(**config["training"])

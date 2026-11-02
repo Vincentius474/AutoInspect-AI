@@ -1,33 +1,27 @@
 import random
 from pathlib import Path
-
 import numpy as np
 import torch
 import torch.nn as nn
-
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from tqdm import tqdm
-
 from src.models.custom_cnn import CustomCNN
 from src.data.loaders import create_dataloaders
 from src.training.metrics import calculate_metrics
 
 def set_seed(seed=42):
+    """Sets the random seed for reproducibility across various libraries."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
 def run_epoch(model, loader, criterion, optimizer, device, training):
-
+    """Runs a single epoch of training or validation."""
     model.train(training)
-
     total_loss = 0.0
     all_predictions = []
     all_labels = []
-
     context = torch.enable_grad() if training else torch.no_grad()
-
     with context:
         for images, labels in loader:
 
@@ -61,22 +55,16 @@ def run_epoch(model, loader, criterion, optimizer, device, training):
             all_labels.extend(labels.cpu().numpy())
 
     average_loss = total_loss / len(loader.dataset)
-
     metrics = calculate_metrics(
         all_labels,
         all_predictions
     )
-
     return average_loss, metrics
 
 def train_model(epochs=40, batch_size=16, learning_rate=0.001, patience=8, seed=42):
-
+    """Trains the CustomCNN model on the training dataset and evaluates it on the validation dataset."""
     set_seed(seed)
-
-    device = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
     train_loader, val_loader, _ = create_dataloaders(
@@ -87,20 +75,16 @@ def train_model(epochs=40, batch_size=16, learning_rate=0.001, patience=8, seed=
     )
 
     model = CustomCNN(num_classes=3).to(device)
-
-    # Calculate class weights using training labels only.
     labels = [
         label
         for _, label in train_loader.dataset.samples
     ]
-
     counts = np.bincount(labels, minlength=3)
 
     if np.any(counts == 0):
         raise ValueError("A training class contains no images.")
 
     weights = len(labels) / (3.0 * counts)
-
     class_weights = torch.tensor(
         weights,
         dtype=torch.float32,
@@ -114,7 +98,7 @@ def train_model(epochs=40, batch_size=16, learning_rate=0.001, patience=8, seed=
     optimizer = AdamW(
         model.parameters(),
         lr=learning_rate,
-        weight_decay=1e-4
+        weight_decay=5e-4
     )
 
     scheduler = ReduceLROnPlateau(
@@ -127,7 +111,6 @@ def train_model(epochs=40, batch_size=16, learning_rate=0.001, patience=8, seed=
 
     checkpoint_dir = Path("models/checkpoints")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-
     best_f1 = -1.0
     epochs_without_improvement = 0
 
@@ -214,13 +197,12 @@ def train_model(epochs=40, batch_size=16, learning_rate=0.001, patience=8, seed=
     return history
 
 if __name__ == "__main__":
-
     from src.training.plot_history import plot_history
-
     history = train_model(
-        epochs=40,
+        epochs=50,
         batch_size=16,
-        learning_rate=0.001,
-        patience=8
+        learning_rate=0.0005,
+        patience=10,
+        seed=42
     )
     plot_history(history)

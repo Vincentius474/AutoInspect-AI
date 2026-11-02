@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 def plot_history(history):
-
+    """Plots the training and validation loss and macro F1 score over epochs."""
     epochs = range(1, len(history["train_loss"]) + 1)
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
@@ -42,9 +42,5 @@ def plot_history(history):
     axes[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig(
-        "reports/figures/training_history.png",
-        dpi=150
-    )
-
+    plt.savefig("reports/figures/training_history.png", dpi=150)
     plt.show()

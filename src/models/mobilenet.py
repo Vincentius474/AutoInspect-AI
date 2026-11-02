@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torchvision.models import (
     mobilenet_v3_small,
@@ -5,20 +6,17 @@ from torchvision.models import (
 )
 
 def create_mobilenet(num_classes=3, pretrained=True):
+    """Create a MobileNetV3-Small model with a custom classifier."""
     weights = (
         MobileNet_V3_Small_Weights.DEFAULT
         if pretrained else None
     )
 
     model = mobilenet_v3_small(weights=weights)
-
-    # Freeze the feature extractor initially.
     for parameter in model.features.parameters():
         parameter.requires_grad = False
 
-    # Replace the original ImageNet classifier.
     input_features = model.classifier[3].in_features
-
     model.classifier[3] = nn.Linear(
         input_features,
         num_classes
@@ -27,9 +25,6 @@ def create_mobilenet(num_classes=3, pretrained=True):
     return model
 
 if __name__ == "__main__":
-
-    import torch
-
     model = create_mobilenet()
     sample = torch.randn(2, 3, 224, 224)
     output = model(sample)

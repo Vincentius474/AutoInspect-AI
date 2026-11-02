@@ -19,9 +19,8 @@ TEST_SIZE = 0.15
 RANDOM_STATE = 42
 
 def collect_images(directory: Path):
-    """Collect images from the three original class folders."""
+    """Collect images from the original dataset and map them to low/medium/high classes."""
     images = []
-
     for original_class, model_class in CLASS_MAPPING.items():
         class_dir = directory / original_class
 
@@ -52,10 +51,7 @@ def copy_images(images, destination: Path):
     for source_path, label in images:
         target_dir = destination / label
         target_dir.mkdir(parents=True, exist_ok=True)
-
         target_path = target_dir / source_path.name
-
-        # Avoid overwriting files with identical names.
         counter = 1
         while target_path.exists():
             target_path = target_dir / (
@@ -65,8 +61,8 @@ def copy_images(images, destination: Path):
 
         shutil.copy2(source_path, target_path)
 
-
 def main():
+    """Main function to split the dataset."""
     original_train_dir = RAW_DIR / "training"
     original_validation_dir = RAW_DIR / "validation"
 
@@ -85,10 +81,8 @@ def main():
     train_images = collect_images(original_train_dir)
     validation_images = collect_images(original_validation_dir)
 
-    train_paths = [str(path) for path, _ in train_images]
     train_labels = [label for _, label in train_images]
 
-    # Reserve 15% of the original training data for testing.
     train_subset, test_subset = train_test_split(
         train_images,
         test_size=TEST_SIZE,
@@ -96,7 +90,6 @@ def main():
         stratify=train_labels,
     )
 
-    # Preserve the original validation set.
     copy_images(
         train_subset,
         OUTPUT_DIR / "train"
@@ -113,7 +106,6 @@ def main():
     )
 
     print("\nDataset preparation complete!")
-
     for split in ("train", "validation", "test"):
         print(f"\n{split.upper()}")
 
@@ -126,7 +118,6 @@ def main():
             ) if folder.exists() else 0
 
             print(f"  {label}: {count} images")
-
 
 if __name__ == "__main__":
     main()

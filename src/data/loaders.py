@@ -2,9 +2,8 @@ from torch.utils.data import DataLoader
 from src.data.dataset import CarDamageDataset
 
 def create_dataloaders( data_dir="data/splits", batch_size=16, image_size=224, num_workers=0):
-    
+    """Create DataLoaders for training, validation, and testing."""
     data_dir = data_dir
-
     train_dataset = CarDamageDataset(
         root_dir=f"{data_dir}/train",
         image_size=image_size,

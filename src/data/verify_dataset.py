@@ -13,7 +13,6 @@ IMAGE_EXTENSIONS = {
 def image_hash(path):
     """Calculate an image's SHA-256 hash."""
     digest = hashlib.sha256()
-
     with open(path, "rb") as file:
         for chunk in iter(lambda: file.read(8192), b""):
             digest.update(chunk)
@@ -21,6 +20,7 @@ def image_hash(path):
     return digest.hexdigest()
 
 def main():
+    """Verify the dataset structure and check for duplicate images across splits."""
     split_hashes = {}
     total_images = 0
 
@@ -65,7 +65,6 @@ def main():
             )
 
     print("\nChecking duplicate images across splits")
-
     for i, first in enumerate(SPLITS):
         for second in SPLITS[i + 1:]:
             duplicates = split_hashes[first] & split_hashes[second]

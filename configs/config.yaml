@@ -1,0 +1,5 @@
+training:
+  warmup_epochs: 5
+  fine_tune_epochs: 25
+  batch_size: 16
+  seed: 42

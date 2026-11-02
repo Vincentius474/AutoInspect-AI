@@ -1,5 +1,3 @@
-import numpy as np
-
 from sklearn.metrics import (
     accuracy_score,
     precision_recall_fscore_support,
@@ -7,7 +5,7 @@ from sklearn.metrics import (
 )
 
 def calculate_metrics(y_true, y_pred):
-
+    """Calculates various classification metrics based on the true and predicted labels."""
     accuracy = accuracy_score(y_true, y_pred)
     precision, recall, f1, _ = (
         precision_recall_fscore_support(
